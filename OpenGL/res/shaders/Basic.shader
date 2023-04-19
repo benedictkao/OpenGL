@@ -1,7 +1,7 @@
 #shader vertex
 #version 330 core
 
-layout(location = 0) in vec4 position;                                    // take 0th index attribute
+layout(location = 0) in vec4 position;										// take 0th index attribute
 
 void main()
 {
@@ -11,9 +11,11 @@ void main()
 #shader fragment
 #version 330 core
 
-layout(location = 0) out vec4 color;                                      // take 0th index attribute
+layout(location = 0) out vec4 color;										// take 0th index attribute
+
+uniform vec4 u_Color;
 
 void main()
 {
-   color = vec4(0.2, 0.3, 0.8, 1.0);                                      // RGBA format by default
+   color = u_Color;															// RGBA format by default
 };
