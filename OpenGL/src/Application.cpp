@@ -5,6 +5,26 @@
 #include <string>
 #include <sstream>
 
+#define ASSERT(x) if (!(x)) __debugbreak();
+#define GLCall(x) GLClearError();\
+    x;\
+    ASSERT(GLLogCall(#x, __FILE__, __LINE__))
+
+static void GLClearError()
+{
+    while (glGetError() != GL_NO_ERROR);
+}
+
+static bool GLLogCall(const char* function, const char* file, int line)
+{
+    while (GLenum error = glGetError())
+    {
+        std::cout << file << ":" << line << std::endl << "[OpenGL Error] (" << error << "): " << function << std::endl;
+        return false;
+    }
+    return true;
+}
+
 struct ShaderProgramSource
 {
     std::string VertexSource;
@@ -107,19 +127,30 @@ int main(void)
 
     std::cout << glGetString(GL_VERSION) << std::endl;
 
-    float positions[6] = {
-        -0.5f, -0.5f,
-        0.0f, 0.5f,
-        0.5f, -0.5f
+    float positions[] = {
+        -0.5f, -0.5f,   // index 0
+        0.5f, -0.5f,    // index 1
+        0.5f, 0.5f,     // index 2
+        -0.5f, 0.5f     // index 3
+    };
+
+    unsigned int indices[] = {
+        0, 1, 2,        // draw first triangle
+        2, 3, 0         // draw second triangle
     };
 
     unsigned int buffer;
-    glGenBuffers(1, &buffer);                                                       // assign id to buffer
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);                                          // bind the buffer (changes OpenGL state)
-    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);    // creates a data store for the buffer - size is in bytes
+    GLCall(glGenBuffers(1, &buffer));                                                       // assign id to buffer
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));                                          // bind the buffer (changes OpenGL state)
+    GLCall(glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), positions, GL_STATIC_DRAW));    // creates a data store for the buffer - size is in bytes
 
-    glEnableVertexAttribArray(0);                                                   // enable the vertex array
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);          // set an attribute - attr index, vertex size (2D, 3D), normaln, stride (dist betw vertices), attr pos
+    unsigned int ibo;   // HAS to be unsigned!
+    GLCall(glGenBuffers(1, &ibo));                                                                              // assign id to buffer
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));                                                         // bind the buffer (changes OpenGL state)
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));           // creates a data store for the buffer - size is in bytes
+
+    GLCall(glEnableVertexAttribArray(0));                                                   // enable the vertex array
+    GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));          // set an attribute - attr index, vertex size (2D, 3D), normaln, stride (dist betw vertices), attr pos
 
     ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");           // NOTE: using relative path
     std::cout << "VERTEX" << std::endl;
@@ -128,15 +159,15 @@ int main(void)
     std::cout << source.FragmentSource << std::endl;
 
     unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-    glUseProgram(shader);
+    GLCall(glUseProgram(shader));
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
-
-        glDrawArrays(GL_TRIANGLES, 0, 3);                                           // draws currently bound buffer
+        
+        GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);)                   // draws currently bound buffer - has to be unsigned int!
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
